@@ -32,3 +32,4 @@
 .submitBtn:disabled { opacity: .7; cursor: wait; }
 .signupLink { margin-top: 1.2rem; color: #888; font-size: .8rem; text-align: center; }
 .signupLink a { color: #2d6a2d; font-weight: 700; }
+.notice { margin: 0; color: #2d6a2d; font-size: .8rem; background: rgba(45,106,45,.08); border-radius: 6px; padding: .5rem .75rem; }

@@ -1,4 +1,4 @@
-import { authRequest, sessionHeaders } from "@/lib/supabase-auth";
+import { authRequest, setSessionCookies } from "@/lib/supabase-auth";
 
 export async function POST(request: Request) {
   try {
@@ -15,13 +15,13 @@ export async function POST(request: Request) {
     });
     const result = await response.json() as { user?: { id: string; email?: string; user_metadata?: { full_name?: string } }; access_token?: string; refresh_token?: string; expires_in?: number; msg?: string; message?: string; error_description?: string; error?: string };
     if (!response.ok) return Response.json({ error: result.msg || result.message || result.error_description || result.error || "Could not create your account." }, { status: response.status });
-    const headers = result.access_token && result.refresh_token
-      ? sessionHeaders(result.access_token, result.refresh_token, result.expires_in)
-      : undefined;
+    if (result.access_token && result.refresh_token) {
+      await setSessionCookies(result.access_token, result.refresh_token, result.expires_in);
+    }
     return Response.json({
       user: result.user ? { id: result.user.id, name: result.user.user_metadata?.full_name ?? name, email: result.user.email ?? email } : null,
-      needsEmailConfirmation: !headers,
-    }, { status: 201, headers });
+      needsEmailConfirmation: !result.access_token || !result.refresh_token,
+    }, { status: 201 });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     console.error("[api/auth/register] Supabase request failed:", detail);

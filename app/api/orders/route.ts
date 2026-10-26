@@ -45,15 +45,29 @@ export async function POST(request: Request) {
     const user = await userResponse.json() as { id: string };
     const { url, anonKey } = supabaseConfig();
     const ids = body.items.map(item => item.product_id);
-    const productQuery = new URLSearchParams({
-      select: "id,name,category,price,image,tag,available,stock_quantity",
-      id: `in.(${ids.join(",")})`,
-    });
-    const productResponse = await fetch(`${url}/rest/v1/products?${productQuery}`, {
+    // Try fetching with stock_quantity; fall back without it if the column doesn't exist yet
+    let products: { id: number; name: string; category: string; price: number | string; image: string; available: boolean; stock_quantity?: number }[] = [];
+    let hasStockColumn = true;
+    const productQueryFull = new URLSearchParams({ select: "id,name,category,price,image,tag,available,stock_quantity", id: `in.(${ids.join(",")})` });
+    const productResponseFull = await fetch(`${url}/rest/v1/products?${productQueryFull}`, {
       headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}` }, cache: "no-store",
     });
-    if (!productResponse.ok) return Response.json({ error: await responseError(productResponse, "Could not verify cart products.") }, { status: productResponse.status });
-    const products = await productResponse.json() as { id: number; name: string; category: string; price: number | string; image: string; available: boolean; stock_quantity: number }[];
+    if (!productResponseFull.ok) {
+      const msg = await responseError(productResponseFull, "Could not verify cart products.");
+      if (/stock_quantity.*does not exist|does not exist.*stock_quantity/i.test(msg)) {
+        hasStockColumn = false;
+        const productQueryBasic = new URLSearchParams({ select: "id,name,category,price,image,tag,available", id: `in.(${ids.join(",")})` });
+        const productResponseBasic = await fetch(`${url}/rest/v1/products?${productQueryBasic}`, {
+          headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}` }, cache: "no-store",
+        });
+        if (!productResponseBasic.ok) return Response.json({ error: await responseError(productResponseBasic, "Could not verify cart products.") }, { status: productResponseBasic.status });
+        products = await productResponseBasic.json() as typeof products;
+      } else {
+        return Response.json({ error: msg }, { status: productResponseFull.status });
+      }
+    } else {
+      products = await productResponseFull.json() as typeof products;
+    }
     if (products.length !== ids.length) return Response.json({ error: "One or more products are no longer in the catalog. Refresh your cart." }, { status: 409 });
     const byId = new Map(products.map(product => [Number(product.id), product]));
     const orderItems = body.items.map(item => {
@@ -69,7 +83,10 @@ export async function POST(request: Request) {
       };
     });
     if (products.some(product => !product.available)) return Response.json({ error: "A product in your cart is sold out. Refresh your cart and try again." }, { status: 409 });
-    if (body.items.some(item => (byId.get(item.product_id)?.stock_quantity ?? 0) < item.quantity)) {
+    if (hasStockColumn && body.items.some(item => {
+      const stock = byId.get(item.product_id)?.stock_quantity;
+      return stock !== undefined && stock !== null && stock < item.quantity;
+    })) {
       return Response.json({ error: "There is not enough stock for one or more items. Please update your cart and try again." }, { status: 409 });
     }
 
@@ -112,7 +129,13 @@ export async function POST(request: Request) {
     }
     const saved = await response.json() as { id: number }[];
     return Response.json({ order: saved[0] }, { status: 201 });
-  } catch {
-    return Response.json({ error: "Could not connect to the order database. Please try again." }, { status: 503 });
+  } catch (error) {
+    console.error("[api/orders] Create order failed:", error);
+    const detail = error instanceof Error ? error.message : String(error);
+    return Response.json({
+      error: process.env.NODE_ENV === "development"
+        ? `Could not create order: ${detail}`
+        : "Could not create the order. Check the server logs for details.",
+    }, { status: 503 });
   }
 }

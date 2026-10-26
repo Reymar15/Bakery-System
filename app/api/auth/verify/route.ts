@@ -1,4 +1,4 @@
-import { authRequest, responseError, sessionHeaders } from "@/lib/supabase-auth";
+import { authRequest, responseError, setSessionCookies } from "@/lib/supabase-auth";
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +14,8 @@ export async function POST(request: Request) {
     });
     if (!response.ok) return Response.json({ error: await responseError(response, "That code is invalid or has expired.") }, { status: response.status });
     const result = await response.json() as { access_token: string; refresh_token: string; expires_in?: number };
-    return Response.json({ success: true }, { headers: sessionHeaders(result.access_token, result.refresh_token, result.expires_in) });
+    await setSessionCookies(result.access_token, result.refresh_token, result.expires_in);
+    return Response.json({ success: true });
   } catch {
     return Response.json({ error: "Could not verify the code. Please try again." }, { status: 503 });
   }

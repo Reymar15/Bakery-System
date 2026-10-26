@@ -47,7 +47,6 @@ export default function AccountPage() {
             <p className={styles.email}>{user.email}</p>
             <p className={styles.message}>You’re signed in and ready to order your favourites.</p>
             <a href="/#products" className={styles.primary}>EXPLORE THE MENU</a>
-            <a href="/admin" className={styles.secondary}>{isAdmin ? "OPEN ADMIN DASHBOARD" : "ADMIN PORTAL"}</a>
             <button type="button" className={styles.secondary} onClick={signOut} disabled={signingOut}>{signingOut ? "SIGNING OUT…" : "LOG OUT"}</button>
           </>
         ) : (
@@ -57,7 +56,6 @@ export default function AccountPage() {
             <p className={styles.message}>Log in or create an account to get started.</p>
             <a href="/login" className={styles.primary}>LOG IN</a>
             <a href="/signup" className={styles.secondary}>CREATE AN ACCOUNT</a>
-            <a href="/admin" className={styles.secondary}>ADMIN PORTAL</a>
           </>
         )}
       </section>

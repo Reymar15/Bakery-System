@@ -2,6 +2,16 @@ import { authRequest, requestCookies, responseError, supabaseConfig } from "@/li
 
 const statuses = ["pending", "confirmed", "preparing", "ready", "completed", "cancelled"];
 
+function orderRouteError(operation: string, error: unknown) {
+  console.error(`[api/admin/orders] ${operation} failed:`, error);
+  const message = error instanceof Error ? error.message : String(error);
+  return Response.json({
+    error: process.env.NODE_ENV === "development"
+      ? `Could not ${operation}: ${message}`
+      : `Could not ${operation}. Check the server logs for details.`,
+  }, { status: 503 });
+}
+
 async function getAdminToken(request: Request) {
   const { accessToken: encodedToken } = requestCookies(request);
   if (!encodedToken) return { error: Response.json({ error: "Please sign in to continue." }, { status: 401 }) };
@@ -34,8 +44,8 @@ export async function GET(request: Request) {
       return Response.json({ error: message }, { status: response.status });
     }
     return Response.json(await response.json(), { headers: { "Cache-Control": "no-store, max-age=0" } });
-  } catch {
-    return Response.json({ error: "Could not connect to the order database." }, { status: 503 });
+  } catch (error) {
+    return orderRouteError("load orders", error);
   }
 }
 
@@ -62,8 +72,12 @@ export async function PATCH(request: Request) {
       cache: "no-store",
     });
     if (!response.ok) return Response.json({ error: await responseError(response, "Could not update the order.") }, { status: response.status });
-    return Response.json(await response.json().catch(() => []));
-  } catch {
-    return Response.json({ error: "Could not connect to the order database." }, { status: 503 });
+    const updated = await response.json() as { id: number; status: string }[];
+    if (!updated.length) {
+      return Response.json({ error: "No order was updated. Check that the order exists and your admin account has permission to update it." }, { status: 404 });
+    }
+    return Response.json(updated[0]);
+  } catch (error) {
+    return orderRouteError("update order status", error);
   }
 }

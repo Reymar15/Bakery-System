@@ -183,9 +183,10 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: order.id, status }),
       });
-      const data = await response.json();
+      const data = await response.json() as Order & { error?: string };
       if (!response.ok) throw new Error(data.error || "Could not update order status.");
-      setOrders(current => current.map(item => item.id === order.id ? { ...item, status } : item));
+      if (data.id !== order.id || data.status !== status) throw new Error("Supabase did not confirm the order status change. Refresh the orders and try again.");
+      setOrders(current => current.map(item => item.id === order.id ? { ...item, status: data.status } : item));
       await loadProducts();
     } catch (e) { setOrdersError(e instanceof Error ? e.message : "Could not update order status."); }
     finally { setUpdatingOrderId(null); }

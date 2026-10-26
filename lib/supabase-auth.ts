@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+
 const ACCESS_COOKIE = "dc_sb_access";
 const REFRESH_COOKIE = "dc_sb_refresh";
 const COOKIE_AGE = 60 * 60 * 24 * 30;
@@ -28,22 +30,22 @@ export function requestCookies(request: Request) {
   return { accessToken: read(ACCESS_COOKIE), refreshToken: read(REFRESH_COOKIE) };
 }
 
-function cookie(name: string, value: string, age: number) {
-  return `${name}=${encodeURIComponent(value)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${age}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
+export async function setSessionCookies(accessToken: string, refreshToken: string, expiresIn?: number) {
+  const store = await cookies();
+  const options = {
+    httpOnly: true,
+    path: "/",
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+  };
+  store.set(ACCESS_COOKIE, accessToken, { ...options, maxAge: Math.max(expiresIn ?? 3600, 60) });
+  store.set(REFRESH_COOKIE, refreshToken, { ...options, maxAge: COOKIE_AGE });
 }
 
-export function sessionHeaders(accessToken: string, refreshToken: string, expiresIn?: number) {
-  const headers = new Headers();
-  headers.append("Set-Cookie", cookie(ACCESS_COOKIE, accessToken, Math.max(expiresIn ?? 3600, 60)));
-  headers.append("Set-Cookie", cookie(REFRESH_COOKIE, refreshToken, COOKIE_AGE));
-  return headers;
-}
-
-export function clearSessionHeaders() {
-  const headers = new Headers();
-  headers.append("Set-Cookie", cookie(ACCESS_COOKIE, "", 0));
-  headers.append("Set-Cookie", cookie(REFRESH_COOKIE, "", 0));
-  return headers;
+export async function clearSessionCookies() {
+  const store = await cookies();
+  store.set(ACCESS_COOKIE, "", { path: "/", maxAge: 0, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+  store.set(REFRESH_COOKIE, "", { path: "/", maxAge: 0, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
 }
 
 export async function responseError(response: Response, fallback: string) {
