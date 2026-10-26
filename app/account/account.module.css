@@ -1,0 +1,18 @@
+.page { min-height: 100vh; display: grid; place-items: center; padding: 2rem 1rem; background: #f5f0c0; }
+.card { width: min(100%, 460px); padding: 2.5rem 2.2rem; background: #fff; border: 1.5px solid #ddd890; border-radius: 18px; box-shadow: 0 12px 40px rgba(0,0,0,.1); }
+.backLink { display: inline-block; margin-bottom: 1.5rem; color: #2d6a2d; font-size: .78rem; font-weight: 700; }
+.brand { display: flex; align-items: center; gap: .6rem; width: fit-content; margin-bottom: 2rem; padding: .5rem 1rem .5rem .65rem; border: 3px solid #1a4a1a; border-radius: 50px; background: #2d6a2d; }
+.brand > span { font-size: 1.5rem; }
+.brand > div { display: flex; flex-direction: column; line-height: 1.2; }
+.brand strong { color: #fff; font-size: .9rem; }
+.brand small { color: #b8d8b8; font-size: .6rem; font-style: italic; }
+.eyebrow { margin-bottom: .4rem; color: #2d6a2d; font-size: .7rem; font-weight: 800; letter-spacing: .14em; }
+.title { color: #1a3a1a; font-size: 1.6rem; font-weight: 900; line-height: 1.2; }
+.email { margin-top: .4rem; color: #2d6a2d; font-size: .9rem; font-weight: 700; }
+.message { margin: .8rem 0 1.5rem; color: #777; font-size: .88rem; line-height: 1.6; }
+.primary, .secondary { display: block; width: 100%; padding: .85rem 1rem; border-radius: 8px; text-align: center; font-size: .8rem; font-weight: 800; letter-spacing: .08em; text-decoration: none; cursor: pointer; }
+.primary { border: 1px solid #2d6a2d; background: #2d6a2d; color: #fff; }
+.primary:hover { background: #1a4a1a; }
+.secondary { margin-top: .65rem; border: 1px solid #d7dfd2; background: #fff; color: #2d6a2d; }
+.secondary:hover { background: #f7f9f3; }
+.secondary:disabled { opacity: .65; cursor: wait; }
