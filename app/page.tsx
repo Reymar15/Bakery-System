@@ -60,6 +60,9 @@ export default function Home() {
   const [mobileNav, setMobileNav] = useState(false);
   const [chatOpen, setChatOpen]   = useState(false);
   const [slide, setSlide]         = useState(0);
+  const [toast, setToast]         = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [form, setForm]           = useState<OrderForm>(EMPTY_FORM);
   const [errors, setErrors]       = useState<Partial<OrderForm>>({});
 
@@ -103,7 +106,9 @@ export default function Home() {
     window.history.replaceState({}, "", currentUrl.toString());
   }, [catalogLoaded, userSignedIn, products]);
 
-  const filtered  = activeCategory === "All" ? products : products.filter(p => p.category === activeCategory);
+  const filtered = searchQuery.trim()
+    ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.category.toLowerCase().includes(searchQuery.toLowerCase()))
+    : activeCategory === "All" ? products : products.filter(p => p.category === activeCategory);
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
   const subtotal  = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const deliveryFee = form.mode === "delivery" ? DELIVERY_FEE : 0;
@@ -131,6 +136,8 @@ export default function Home() {
       const ex = prev.find(i => i.id === p.id);
       return ex ? prev.map(i => i.id === p.id ? { ...i, qty: i.qty + 1 } : i) : [...prev, { ...p, qty: 1 }];
     });
+    setToast(`${p.name} added to cart!`);
+    setTimeout(() => setToast(""), 2500);
   }
   function changeQty(id: number, delta: number) {
     setCart(prev => prev.flatMap(i => i.id === id ? (i.qty + delta < 1 ? [] : [{ ...i, qty: i.qty + delta }]) : [i]));
@@ -225,28 +232,15 @@ export default function Home() {
                   onClick={() => { setActiveCategory("All"); setMobileNav(false); }}>All Items</a>
               </div>
             </div>
-            <div className={styles.navDropdown}>
-              <span className={styles.navLink}>SERVICES ▾</span>
-              <div className={styles.dropdown}>
-                <a href="#" className={styles.dropItem}>Custom Cakes</a>
-                <a href="#" className={styles.dropItem}>Catering</a>
-                <a href="#" className={styles.dropItem}>Gift Boxes</a>
-                <a href="#" className={styles.dropItem}>Delivery</a>
-              </div>
-            </div>
             <a href="#contact" className={styles.navLink} onClick={() => setMobileNav(false)}>STORES</a>
           </nav>
           <div className={styles.navIcons}>
-            <button className={styles.iconBtn} title="Search">
+            <button className={styles.iconBtn} title="Search" onClick={() => { setSearchOpen(o => !o); setSearchQuery(""); }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
             <a href="/account" className={styles.iconBtn} title="My account" aria-label="My account">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </a>
-            <button className={styles.iconBtn} title="Wishlist">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-              {wishlist.length > 0 && <span className={styles.iconBadgeGreen}>{wishlist.length}</span>}
-            </button>
             <button className={styles.iconBtn} title="Cart" onClick={() => { setCartOpen(true); setCheckout(false); }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
               {cartCount > 0 && <span className={styles.iconBadgeRed}>{cartCount}</span>}
@@ -257,6 +251,25 @@ export default function Home() {
           </div>
         </div>
       </header>
+
+      {/* SEARCH BAR */}
+      {searchOpen && (
+        <div className={styles.searchBar}>
+          <div className={styles.searchInner}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input
+              autoFocus
+              type="text"
+              placeholder="Search breads, cakes, drinks…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className={styles.searchInput}
+            />
+            {searchQuery && <button className={styles.searchClear} onClick={() => setSearchQuery("")}>✕</button>}
+            <button className={styles.searchClose} onClick={() => { setSearchOpen(false); setSearchQuery(""); }}>Close</button>
+          </div>
+        </div>
+      )}
 
       {/* HERO */}
       <section id="home" className={styles.hero}>
@@ -309,8 +322,6 @@ export default function Home() {
                     <span className={`${styles.cardTag} ${product.tag === "New" ? styles.tagNew : styles.tagBest}`}>{product.tag}</span>
                   )}
                   {!product.available && <div className={styles.soldOutBanner}>SOLD OUT</div>}
-                  <button className={`${styles.wishBtn} ${wishlist.includes(product.id) ? styles.wishActive : ""}`}
-                    onClick={() => toggleWishlist(product.id)}>♥</button>
                   {product.available && (
                     <div className={styles.cardHover}>
                       <button className={styles.hoverBtn} onClick={() => addToCart(product)}>ADD TO CART</button>
@@ -600,6 +611,9 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* TOAST */}
+      {toast && <div className={styles.toast} role="status">🛒 {toast}</div>}
 
     </div>
   );
